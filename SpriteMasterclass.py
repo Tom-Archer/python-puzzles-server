@@ -3,9 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from PIL import Image
 """ Sprites rendered using a diy points class and special shader uv_spriterot.
 
-This demo builds on the SpriteBalls demo but adds sprite image rotation, thanks
-to Joel Murphy on stackoverflow. The information is used by the uv_spritemult
-shader as follows
+This demo builds on the SpriteMulti demo.
+The information is used by the uv_spritemult shader as follows
 
   vertices[0]   x position of centre of point relative to centre of screen in pixels
   vertices[1]   y position
@@ -21,17 +20,14 @@ shader as follows
   tex_coords[1] distance of top of sprite square from top of texture
 
 unif[48] is used to hold the size of the sprite square to use for texture
-sampling in this case each sprite has a patch 0.125x0.125 as there
-are 8x8 on the sheet. However unif[48] is set to 0.1 to leave a margin of
-0.0125 around each sprite.
-
-The movement of the vertices is calculated using numpy which makes it very
-fast but it is quite hard to understand as all the iteration is done
-automatically.
+sampling.
 """
+
 print("""
+Space to start
 ESC to quit
 """)
+
 import numpy as np
 import random
 
@@ -81,32 +77,43 @@ rot = np.zeros((num_pixels*num_pixels, 3)) # :,0 for rotation
 rot[:,1] = 999.999 # :,1 R, G
 rot[:,2] = 999.999 # :,2 B, A
 
-bugs = pi3d.Points(camera=CAMERA, vertices=loc, normals=rot, tex_coords=uv,
+points = pi3d.Points(camera=CAMERA, vertices=loc, normals=rot, tex_coords=uv,
                    point_size=PIXEL_SIZE)
-bugs.set_draw_details(shader, [img])
-bugs.unif[48] = point_size
+points.set_draw_details(shader, [img])
+points.unif[48] = point_size
+
+started = False
+
+remaining_rows = list(range(0, num_pixels))
 
 while DISPLAY.loop_running():
 
-  # draw
-  bugs.draw()
-    
-  # update positions
-  row = random.randint(0, num_pixels-1)
-  positions[row] = sorted_row
+    # draw
+    points.draw()
 
-  for i in range(0, num_pixels):
-    index = positions[row,i]
-    loc[index+row*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
+    if len(remaining_rows) == 0:
+        started = False
+
+    if started:
+
+        # update positions
+        row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
+        positions[row] = sorted_row
+
+        for i in range(0, num_pixels):
+            index = positions[row,i]
+            loc[index+row*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
   
-  ##### re_init
-  bugs.buf[0].re_init(pts=loc, normals=rot, texcoords=uv) # reform opengles array_buffer
+        ##### re_init
+        points.buf[0].re_init(pts=loc, normals=rot, texcoords=uv) # reform opengles array_buffer
 
-  k = KEYBOARD.read()
-  if k > -1:
-    if k == 27:
-      KEYBOARD.close()
-      DISPLAY.stop()
-      break
+    k = KEYBOARD.read()
+    if k > -1:
+        if k == 27:
+            KEYBOARD.close()
+            DISPLAY.stop()
+            break
+        if k == 32:
+            started = True
 
 
