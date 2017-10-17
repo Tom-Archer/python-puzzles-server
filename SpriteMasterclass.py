@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import absolute_import, division, print_function, unicode_literals
-
+from PIL import Image
 """ Sprites rendered using a diy points class and special shader uv_spriterot.
 
 This demo builds on the SpriteBalls demo but adds sprite image rotation, thanks
@@ -35,15 +35,17 @@ ESC to quit
 import numpy as np
 import random
 
-#import demo
 import pi3d
 
+texture_file = "MasterclassImage960.png"
+texture = Image.open(texture_file)
+texture_size = texture.size
 
 IMAGE_SIZE = 900
 PIXEL_SIZE = 5
 
 num_pixels = int(IMAGE_SIZE / PIXEL_SIZE)
-point_size = 1.0 * float(PIXEL_SIZE / 960)
+point_size = 1.0 * float(PIXEL_SIZE / texture_size[0])
 
 KEYBOARD = pi3d.Keyboard()
 #LOGGER = pi3d.Log.logger(__name__)
@@ -55,20 +57,24 @@ HWIDTH, HHEIGHT = int(DISPLAY.width / 2.0), int(DISPLAY.height / 2.0)
 CAMERA = pi3d.Camera(is_3d=False)
 shader = pi3d.Shader("uv_pointsprite")
 
-img = pi3d.Texture("MasterclassImage960.png", mipmap=False, i_format=pi3d.GL_RGBA, filter=pi3d.GL_NEAREST)
+img = pi3d.Texture(texture_file, mipmap=False, i_format=pi3d.GL_RGBA, filter=pi3d.GL_NEAREST)
 # i_format=pi3d.GL_LUMINANCE_ALPHA ## see what happens with a converted texture type
 loc = np.zeros((num_pixels*num_pixels, 3))
 uv = np.zeros((num_pixels*num_pixels, 2)) # u picnum.u v
 #uv[:,:] = 0.0 # all start off same. uv is top left corner of square
+positions = np.random.rand(num_pixels, num_pixels).argsort()
+sorted_row = np.arange(num_pixels)
 
 for j in range(0, num_pixels):
- for i in range(0, num_pixels):
-    loc[i+j*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
-    loc[i+j*num_pixels,1] = HHEIGHT - (j * PIXEL_SIZE) - PIXEL_SIZE/2
-    loc[i+j*num_pixels,2] = 0.999 # no scaling
+    for i in range(0, num_pixels):
+        index = positions[j,i]
+        loc[index+j*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
+        loc[index+j*num_pixels,1] = HHEIGHT - (j * PIXEL_SIZE) - PIXEL_SIZE/2
+        loc[index+j*num_pixels,2] = 0.999 # no scaling
 
-    uv[i+j*num_pixels,0] = i * point_size  # all start off same. uv is top left corner of square
-    uv[i+j*num_pixels,1] = j * point_size
+        # Set textures
+        uv[index+j*num_pixels,0] = index * point_size
+        uv[index+j*num_pixels,1] = j * point_size
 
 # leave this alone
 rot = np.zeros((num_pixels*num_pixels, 3)) # :,0 for rotation
@@ -81,10 +87,20 @@ bugs.set_draw_details(shader, [img])
 bugs.unif[48] = point_size
 
 while DISPLAY.loop_running():
-  # update positions
 
   # draw
   bugs.draw()
+    
+  # update positions
+  row = random.randint(0, num_pixels-1)
+  positions[row] = sorted_row
+
+  for i in range(0, num_pixels):
+    index = positions[row,i]
+    loc[index+row*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
+  
+  ##### re_init
+  bugs.buf[0].re_init(pts=loc, normals=rot, texcoords=uv) # reform opengles array_buffer
 
   k = KEYBOARD.read()
   if k > -1:
