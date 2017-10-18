@@ -30,7 +30,7 @@ ESC to quit
 
 import numpy as np
 import random
-
+import time
 import pi3d
 
 texture_file = "MasterclassImage960.png"
@@ -44,7 +44,7 @@ num_pixels = int(IMAGE_SIZE / PIXEL_SIZE)
 point_size = 1.0 * float(PIXEL_SIZE / texture_size[0])
 
 KEYBOARD = pi3d.Keyboard()
-#LOGGER = pi3d.Log.logger(__name__)
+LOGGER = pi3d.Log(__name__, level='INFO', file='info.log')
 
 BACKGROUND_COLOR = (0.3, 0.3, 0.3, 1.0)
 DISPLAY = pi3d.Display.create(background=BACKGROUND_COLOR, frames_per_second=20)
@@ -86,6 +86,9 @@ started = False
 
 remaining_rows = list(range(0, num_pixels))
 
+tick=0
+next_time = time.time()+2.0
+
 while DISPLAY.loop_running():
 
     # draw
@@ -105,7 +108,13 @@ while DISPLAY.loop_running():
             loc[index+row*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
   
         ##### re_init
-        points.buf[0].re_init(pts=loc, normals=rot, texcoords=uv) # reform opengles array_buffer
+        points.buf[0].re_init(pts=loc) # reform opengles array_buffer
+
+        if time.time() > next_time:
+            LOGGER.info("FPS: %4.1f", (tick / 2.0))
+            tick=0
+            next_time = time.time() + 2.0
+        tick+=1
 
     k = KEYBOARD.read()
     if k > -1:
