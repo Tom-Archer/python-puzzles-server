@@ -55,25 +55,30 @@ CAMERA = pi3d.Camera(is_3d=False)
 shader = pi3d.Shader("uv_pointsprite")
 
 img = pi3d.Texture(texture_file, mipmap=False, i_format=pi3d.GL_RGBA, filter=pi3d.GL_NEAREST)
-# i_format=pi3d.GL_LUMINANCE_ALPHA ## see what happens with a converted texture type
-loc = np.zeros((num_pixels*num_pixels, 3))
-uv = np.zeros((num_pixels*num_pixels, 2)) # u picnum.u v
-#uv[:,:] = 0.0 # all start off same. uv is top left corner of square
-positions = np.random.rand(num_pixels, num_pixels).argsort()
-sorted_row = np.arange(num_pixels)
 
+loc = np.zeros((num_pixels*num_pixels, 3))
+uv = np.zeros((num_pixels*num_pixels, 2))
+initial_positions = np.random.rand(num_pixels, num_pixels).argsort()
+
+# Constant arrays for efficiency
+sorted_row = np.arange(num_pixels)
+sorted_x_positions = np.arange(-HWIDTH + PIXEL_SIZE/2, -HWIDTH + PIXEL_SIZE/2 + (PIXEL_SIZE * num_pixels), PIXEL_SIZE)
+sorted_y_positions = np.arange(HHEIGHT - PIXEL_SIZE/2, HHEIGHT - PIXEL_SIZE/2 - (PIXEL_SIZE * num_pixels), -PIXEL_SIZE)
+texture_positions = np.linspace(point_size, point_size * (num_pixels - 1), num_pixels)
+
+# Set starting positions
 for j in range(0, num_pixels):
     for i in range(0, num_pixels):
-        index = positions[j,i]
-        loc[index+j*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
-        loc[index+j*num_pixels,1] = HHEIGHT - (j * PIXEL_SIZE) - PIXEL_SIZE/2
+        index = initial_positions[j,i]
+        loc[index+j*num_pixels,0] = sorted_x_positions[i]
+        loc[index+j*num_pixels,1] = sorted_y_positions[j]
         loc[index+j*num_pixels,2] = 0.999 # no scaling
 
         # Set textures
-        uv[index+j*num_pixels,0] = index * point_size
-        uv[index+j*num_pixels,1] = j * point_size
+        uv[index+j*num_pixels,0] = texture_positions[index] 
+        uv[index+j*num_pixels,1] = texture_positions[j]
 
-# leave this alone
+# Rotation is not required.
 rot = np.zeros((num_pixels*num_pixels, 3)) # :,0 for rotation
 rot[:,1] = 999.999 # :,1 R, G
 rot[:,2] = 999.999 # :,2 B, A
@@ -84,7 +89,6 @@ points.set_draw_details(shader, [img])
 points.unif[48] = point_size
 
 started = False
-
 remaining_rows = list(range(0, num_pixels))
 
 tick=0
@@ -93,39 +97,39 @@ next_time = time.time()+2.0
 LOGGER.info('Starting SpriteMasterclass')
 
 while DISPLAY.loop_running():
+    try:
+        # draw
+        points.draw()
 
-    # draw
-    points.draw()
+        if len(remaining_rows) == 0:
+            started = False
 
-    if len(remaining_rows) == 0:
-        started = False
+        if started:
 
-    if started:
+            # update positions
+            row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
+            loc[row*num_pixels:(row+1)*num_pixels,0] = sorted_x_positions
+      
+            # re_init
+            points.buf[0].re_init(pts=loc) # reform opengles array_buffer
 
-        # update positions
-        row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
-        positions[row] = sorted_row
+            if time.time() > next_time:
+                LOGGER.info("FPS: %4.1f", (tick / 2.0))
+                tick=0
+                next_time = time.time() + 2.0
+            tick+=1
 
-        for i in range(0, num_pixels):
-            index = positions[row,i]
-            loc[index+row*num_pixels,0] = -HWIDTH + (i * PIXEL_SIZE) + PIXEL_SIZE/2
-  
-        ##### re_init
-        points.buf[0].re_init(pts=loc) # reform opengles array_buffer
-
-        if time.time() > next_time:
-            LOGGER.info("FPS: %4.1f", (tick / 2.0))
-            tick=0
-            next_time = time.time() + 2.0
-        tick+=1
-
-    k = KEYBOARD.read()
-    if k > -1:
-        if k == 27:
-            KEYBOARD.close()
-            DISPLAY.stop()
-            break
-        if k == 32:
-            started = True
-
-
+        # parse keypresses
+        k = KEYBOARD.read()
+        if k > -1:
+            if k == 27:
+                KEYBOARD.close()
+                DISPLAY.stop()
+                break
+            if k == 32:
+                started = True
+                
+    except Exception as e:
+        KEYBOARD.close()
+        DISPLAY.stop()
+        LOGGER.info(str(e))
