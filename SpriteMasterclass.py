@@ -1,9 +1,9 @@
 #!/usr/bin/python
 from __future__ import absolute_import, division, print_function, unicode_literals
-from PIL import Image
+
 """ Sprites rendered using a diy points class and special shader uv_spriterot.
 
-This demo builds on the SpriteMulti demo.
+This code builds on the SpriteMulti demo.
 The information is used by the uv_spritemult shader as follows
 
   vertices[0]   x position of centre of point relative to centre of screen in pixels
@@ -32,6 +32,7 @@ import numpy as np
 import random
 import time
 import pi3d
+from PIL import Image
 
 texture_file = "MasterclassImage960.png"
 texture = Image.open(texture_file)
@@ -88,6 +89,8 @@ remaining_rows = list(range(0, num_pixels))
 
 tick=0
 next_time = time.time()+2.0
+
+LOGGER.info('Starting SpriteMasterclass')
 
 while DISPLAY.loop_running():
 
