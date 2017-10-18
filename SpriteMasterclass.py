@@ -64,7 +64,7 @@ initial_positions = np.random.rand(num_pixels, num_pixels).argsort()
 sorted_row = np.arange(num_pixels)
 sorted_x_positions = np.arange(-HWIDTH + PIXEL_SIZE/2, -HWIDTH + PIXEL_SIZE/2 + (PIXEL_SIZE * num_pixels), PIXEL_SIZE)
 sorted_y_positions = np.arange(HHEIGHT - PIXEL_SIZE/2, HHEIGHT - PIXEL_SIZE/2 - (PIXEL_SIZE * num_pixels), -PIXEL_SIZE)
-texture_positions = np.linspace(point_size, point_size * (num_pixels - 1), num_pixels)
+texture_positions = np.linspace(0, point_size * num_pixels, num_pixels, False)
 
 # Set starting positions
 for j in range(0, num_pixels):
