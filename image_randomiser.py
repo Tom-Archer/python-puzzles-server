@@ -23,120 +23,132 @@ unif[48] is used to hold the size of the sprite square to use for texture
 sampling.
 """
 
-print("""
-Space to start
-ESC to quit
-""")
-
 import numpy as np
 import random
 import time
 import pi3d
 from PIL import Image
-
-IMAGE_SIZE = 900
-PIXEL_SIZE = 5
-
-KEYBOARD = pi3d.Keyboard()
-LOGGER = pi3d.Log(__name__, level='INFO', file='infoc.log')
-
-BACKGROUND_COLOR = (0.3, 0.3, 0.3, 1.0)
-DISPLAY = pi3d.Display.create(background=BACKGROUND_COLOR, frames_per_second=20)
-HWIDTH, HHEIGHT = int(DISPLAY.width / 2.0), int(DISPLAY.height / 2.0)
-CAMERA = pi3d.Camera(is_3d=False)
+import threading
 
 class ImageRandomiser(pi3d.Points):
-    def __init__(self, texture_path, image_size, pixel_size, width, height):
+    def __init__(self, texture_path, width, height, pixel_size, camera):
+        self.width = width
+        self.height = height
+    
         texture = Image.open(texture_path)
-        texture_size = texture.size
+        texture_width = texture.size[0]
+        texture_height = texture.size[1]
 
-        self.num_pixels = int(image_size / pixel_size)
-        point_size = 1.0 * float(pixel_size / texture_size[0])
+        if texture_width != texture_height:
+            raise ValueError('The texture must be square.')
+
+        if width > texture_width or height > texture_height:
+            raise ValueError('The texture must be larger than the display area.')
+
+        self.num_pixels_w = int(width / pixel_size)
+        self.num_pixels_h = int(height / pixel_size)
+        
+        point_size = 1.0 * float(pixel_size / texture_width)
 
         shader = pi3d.Shader("uv_pointsprite")
         img = pi3d.Texture(texture_path, mipmap=False, i_format=pi3d.GL_RGBA, filter=pi3d.GL_NEAREST)
 
-        self.loc = np.zeros((self.num_pixels*self.num_pixels, 3))
-        uv = np.zeros((self.num_pixels*self.num_pixels, 2))
+        self.loc = np.zeros((self.num_pixels_w*self.num_pixels_h, 3))
+        uv = np.zeros((self.num_pixels_w*self.num_pixels_h, 2))
         
         # Constant arrays for efficiency
-        sorted_row = np.arange(self.num_pixels)
-        self.sorted_x_positions = np.arange(-width + pixel_size/2, -width + pixel_size/2 + (pixel_size * self.num_pixels), pixel_size)
-        sorted_y_positions = np.arange(height - pixel_size/2, height - pixel_size/2 - (pixel_size * self.num_pixels), -pixel_size)
-        texture_positions = np.linspace(0, point_size * self.num_pixels, self.num_pixels, False)
-        # make this accessible so we can grab rows
-        self.initial_positions = np.random.rand(self.num_pixels, self.num_pixels).argsort()
+        sorted_row = np.arange(self.num_pixels_w)
+        self.sorted_x_positions = np.arange(pixel_size/2, pixel_size/2 + (pixel_size * self.num_pixels_w), pixel_size)
+        sorted_y_positions = np.arange(- pixel_size/2, - pixel_size/2 - (pixel_size * self.num_pixels_h), -pixel_size)
+        texture_positions_x = np.linspace(0, point_size * self.num_pixels_w, self.num_pixels_w, False)
+        texture_positions_y = np.linspace(0, point_size * self.num_pixels_h, self.num_pixels_h, False)
+        self.initial_positions = np.random.rand(self.num_pixels_h, self.num_pixels_w).argsort()
         
         # Set starting positions
-        for j in range(0, self.num_pixels):
-            for i in range(0, self.num_pixels):
+        for j in range(0, self.num_pixels_h):
+            for i in range(0, self.num_pixels_w):
                 index = self.initial_positions[j,i]
-                self.loc[index+j*self.num_pixels,0] = self.sorted_x_positions[i]
-                self.loc[index+j*self.num_pixels,1] = sorted_y_positions[j]
-                self.loc[index+j*self.num_pixels,2] = 0.999 # no scaling
+                self.loc[index+j*self.num_pixels_w,0] = self.sorted_x_positions[i]
+                self.loc[index+j*self.num_pixels_w,1] = sorted_y_positions[j]
+                self.loc[index+j*self.num_pixels_w,2] = 0.999 # no scaling
 
                 # Set textures
-                uv[index+j*self.num_pixels,0] = texture_positions[index] 
-                uv[index+j*self.num_pixels,1] = texture_positions[j]
+                uv[index+j*self.num_pixels_w,0] = texture_positions_x[index] 
+                uv[index+j*self.num_pixels_w,1] = texture_positions_y[j]
 
         # Rotation is not required.
-        rot = np.zeros((self.num_pixels*self.num_pixels, 3)) # :,0 for rotation
+        rot = np.zeros((self.num_pixels_w*self.num_pixels_h, 3)) # :,0 for rotation
         rot[:,1] = 999.999 # :,1 R, G
         rot[:,2] = 999.999 # :,2 B, A
 
-        super(ImageRandomiser, self).__init__(camera=CAMERA, vertices=self.loc, normals=rot, tex_coords=uv,
+        super(ImageRandomiser, self).__init__(camera=camera, vertices=self.loc, normals=rot, tex_coords=uv,
                            point_size=pixel_size)
         
         self.set_draw_details(shader, [img])
         self.unif[48] = point_size
                 
     def update(self, row_list):
-        #update positions
+        # Update positions
         for row in row_list:
-            self.loc[row*self.num_pixels:(row+1)*self.num_pixels,0] = self.sorted_x_positions
+            if row < self.initial_positions.shape[0]:
+                self.loc[row*self.num_pixels_w:(row+1)*self.num_pixels_w,0] = self.sorted_x_positions
       
         # re_init
-        self.buf[0].re_init(pts=self.loc) # reform opengles array_buffer
-        
-        #if time.time() > next_time:
-        #    LOGGER.info("FPS: %4.1f", (tick / 2.0))
-        #    tick=0
-        #    next_time = time.time() + 2.0
-        #tick+=1
+        self.re_init(pts=self.loc) # reform opengles array_buffer
 
+    def get_row(self, row):
+        if row < self.initial_positions.shape[0]:
+            return self.initial_positions[row]
+        else:
+            return None
 
+if __name__ == '__main__':
+    print("""
+    Space to start
+    ESC to quit
+    """)
+    
+    IMAGE_SIZE = 900
+    PIXEL_SIZE = 5
 
-points = ImageRandomiser("MasterclassImage960.png", IMAGE_SIZE, PIXEL_SIZE, HWIDTH, HHEIGHT)
+    KEYBOARD = pi3d.Keyboard()
+    LOGGER = pi3d.Log(__name__, level='INFO', file='infoc.log')
 
-remaining_rows = list(range(0, points.num_pixels))
+    BACKGROUND_COLOR = (0.3, 0.3, 0.3, 1.0)
+    DISPLAY = pi3d.Display.create(background=BACKGROUND_COLOR, frames_per_second=20)
+    HWIDTH, HHEIGHT = int(DISPLAY.width / 2.0), int(DISPLAY.height / 2.0)
+    CAMERA = pi3d.Camera(at=(HWIDTH,-HHEIGHT,0), eye=(HWIDTH,-HHEIGHT,-0.1), is_3d=False)
 
+    points = ImageRandomiser("MasterclassImage960.png", IMAGE_SIZE, IMAGE_SIZE, PIXEL_SIZE, CAMERA)
 
-LOGGER.info('Starting SpriteMasterclass')
-started = False
-while DISPLAY.loop_running():
-    try:
-        # draw
-        points.draw()
+    remaining_rows = list(range(0, points.num_pixels_h))
 
-        if len(remaining_rows) == 0:
-            started = False
+    LOGGER.info('Starting SpriteMasterclass')
+    started = False
+    while DISPLAY.loop_running():
+        try:
+            # Draw
+            points.draw()
 
-        if started:
-            # update positions
-            row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
-            points.update([row])
+            if len(remaining_rows) == 0:
+                started = False
 
-        # parse keypresses
-        k = KEYBOARD.read()
-        if k > -1:
-            if k == 27:
-                KEYBOARD.close()
-                DISPLAY.stop()
-                break
-            if k == 32:
-                started = True
-                
-    except Exception as e:
-        KEYBOARD.close()
-        DISPLAY.stop()
-        LOGGER.info(str(e))
+            if started:
+                # Update positions
+                row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
+                points.update([row])
+
+            # Parse keypresses
+            k = KEYBOARD.read()
+            if k > -1:
+                if k == 27:
+                    KEYBOARD.close()
+                    DISPLAY.stop()
+                    break
+                if k == 32:
+                    started = True
+                    
+        except Exception as e:
+            KEYBOARD.close()
+            DISPLAY.stop()
+            LOGGER.info(str(e))
