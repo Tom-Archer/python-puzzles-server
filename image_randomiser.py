@@ -28,7 +28,7 @@ import random
 import time
 import pi3d
 from PIL import Image
-import threading
+from status_display import StatusDisplay
 
 class ImageRandomiser(pi3d.Points):
     def __init__(self, texture_path, width, height, pixel_size, camera):
@@ -120,7 +120,9 @@ if __name__ == '__main__':
     CAMERA = pi3d.Camera(at=(HWIDTH,-HHEIGHT,0), eye=(HWIDTH,-HHEIGHT,-0.1), is_3d=False)
 
     points = ImageRandomiser("MasterclassImage960.png", IMAGE_SIZE, IMAGE_SIZE, PIXEL_SIZE, CAMERA)
-
+    status = StatusDisplay(925, -50, CAMERA)
+    status.display_list(['team1','team2','team3','team4'])
+    
     remaining_rows = list(range(0, points.num_pixels_h))
 
     LOGGER.info('Starting SpriteMasterclass')
@@ -129,7 +131,8 @@ if __name__ == '__main__':
         try:
             # Draw
             points.draw()
-
+            status.regen()
+            status.draw()
             if len(remaining_rows) == 0:
                 started = False
 
