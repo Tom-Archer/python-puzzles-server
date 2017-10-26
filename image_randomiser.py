@@ -59,7 +59,7 @@ class ImageRandomiser(pi3d.Points):
         # Constant arrays for efficiency
         sorted_row = np.arange(self.num_pixels_w)
         self.sorted_x_positions = np.arange(pixel_size/2, pixel_size/2 + (pixel_size * self.num_pixels_w), pixel_size)
-        sorted_y_positions = np.arange(- pixel_size/2, - pixel_size/2 - (pixel_size * self.num_pixels_h), -pixel_size)
+        self.sorted_y_positions = np.arange(- pixel_size/2, - pixel_size/2 - (pixel_size * self.num_pixels_h), -pixel_size)
         texture_positions_x = np.linspace(0, point_size * self.num_pixels_w, self.num_pixels_w, False)
         texture_positions_y = np.linspace(0, point_size * self.num_pixels_h, self.num_pixels_h, False)
         self.initial_positions = np.random.rand(self.num_pixels_h, self.num_pixels_w).argsort()
@@ -69,7 +69,7 @@ class ImageRandomiser(pi3d.Points):
             for i in range(0, self.num_pixels_w):
                 index = self.initial_positions[j,i]
                 self.loc[index+j*self.num_pixels_w,0] = self.sorted_x_positions[i]
-                self.loc[index+j*self.num_pixels_w,1] = sorted_y_positions[j]
+                self.loc[index+j*self.num_pixels_w,1] = self.sorted_y_positions[j]
                 self.loc[index+j*self.num_pixels_w,2] = 0.999 # no scaling
 
                 # Set textures
@@ -102,6 +102,18 @@ class ImageRandomiser(pi3d.Points):
         else:
             return None
 
+    def reset(self):
+        # Set starting positions
+        for j in range(0, self.num_pixels_h):
+            for i in range(0, self.num_pixels_w):
+                index = self.initial_positions[j,i]
+                self.loc[index+j*self.num_pixels_w,0] = self.sorted_x_positions[i]
+                self.loc[index+j*self.num_pixels_w,1] = self.sorted_y_positions[j]
+                self.loc[index+j*self.num_pixels_w,2] = 0.999 # no scaling
+
+        # re_init
+        self.re_init(pts=self.loc) # reform opengles array_buffer
+
 if __name__ == '__main__':
     print("""
     Space to start
@@ -112,10 +124,10 @@ if __name__ == '__main__':
     PIXEL_SIZE = 5
 
     KEYBOARD = pi3d.Keyboard()
-    LOGGER = pi3d.Log(__name__, level='INFO', file='infoc.log')
+    LOGGER = pi3d.Log(__name__, level='INFO', file='info.log')
 
     BACKGROUND_COLOR = (0.3, 0.3, 0.3, 1.0)
-    DISPLAY = pi3d.Display.create(background=BACKGROUND_COLOR, frames_per_second=20)
+    DISPLAY = pi3d.Display.create(background=BACKGROUND_COLOR, frames_per_second=10)
     HWIDTH, HHEIGHT = int(DISPLAY.width / 2.0), int(DISPLAY.height / 2.0)
     CAMERA = pi3d.Camera(at=(HWIDTH,-HHEIGHT,0), eye=(HWIDTH,-HHEIGHT,-0.1), is_3d=False)
 
