@@ -1,3 +1,5 @@
+import random
+
 TIMEOUT = 2.0
 
 class Team(object):
@@ -33,7 +35,11 @@ class TeamManager(object):
         for ip_address in self.team_dict:
             if not self.team_dict[ip_address].has_data:
                 free_teams.append(ip_address)
-        return free_teams
+
+        if len(free_teams) > 0:
+            team = free_teams.pop(random.randint(0, len(free_teams)-1))
+            return team
+        return None
 
     def has_timed_out(self, ip_address):
         if ip_address in self.team_dict:
@@ -52,7 +58,8 @@ if __name__ == "__main__":
     import time
     team_manager = TeamManager()
     ip = ipaddress.ip_address('192.0.2.1') 
-    team_manager.register(ip,"team")
+    team_manager.register(ip,"team1")
+    team_manager.register(ipaddress.ip_address('192.0.2.2'), "team2")
     print(team_manager.get_free_team())
     team_manager.allocate(ip, 1)
     print(team_manager.is_allocated(ip))
