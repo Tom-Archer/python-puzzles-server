@@ -3,8 +3,16 @@ import curses
 import pi3d
 import random
 import time
+import collections
+import datetime
+import lists
+import ipaddress
+
+from comms import RegistrationRequest, DataResponse
 from image_randomiser import ImageRandomiser
+from multiprocessing import Queue
 from status_display import StatusDisplay
+from team_manager import TeamManager
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Run Python Puzzles Masterclass Finalé.')
@@ -12,8 +20,14 @@ parser.add_argument("-d", "--demo", action="store_true", help="run in demo mode"
 parser.add_argument("-t", "--time", type=int, help="specify the time before restarting demo mode")
 args = parser.parse_args()
 
+# Dummy Server
+RECENT = 12
+LIST_LENGTH = 100
+
 # Time (seconds) between demo loops
 LOOP_TIME  = 10
+
+# Pi3D setup
 IMAGE_SIZE = 900
 PIXEL_SIZE = 5
 BACKGROUND_COLOR = (0.3, 0.3, 0.3, 1.0)
@@ -27,16 +41,76 @@ CAMERA = pi3d.Camera(at=(HWIDTH,-HHEIGHT,0), eye=(HWIDTH,-HHEIGHT,-0.1), is_3d=F
 
 points = ImageRandomiser("MasterclassImage960.png", IMAGE_SIZE, IMAGE_SIZE, PIXEL_SIZE, CAMERA)
 
+def format_timestamp():
+    return '{:%H:%M:%S} '.format(datetime.datetime.now())
+
+def format_name_ip(team_name, ip_address):
+    return ("\'" + team_name + "\' " if team_name is not None else "") + "(" + str(ip_address) + ") "
+
 def finale_mode(screen):
+
+    team_manager = TeamManager()
+    data_display = collections.deque(maxlen = RECENT)
+    incoming_data = Queue()
+    outgoing_data = Queue()
+
+    # for testing add some dummy data
+    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.2'), "team 1"))
+    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.3'), "team 2"))
+    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.4'), "a very long team name"))
+    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.2'), lists.get_list(LIST_LENGTH)))
+    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.3'), sorted(lists.get_list(LIST_LENGTH))))
+    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.4'), lists.get_list(LIST_LENGTH)))
+            
     try:
         dummy_mode = True
         while dummy_mode:
 
-            # parse teams and requests from server
-            data = ["22:04:22 - data received from team 1 (192.168.0.2) is sorted",
-                    "22:04:47 - data received from team 2 (192.168.0.3) is NOT sorted",
-                    "22:04:53 - data received from team 3 (192.168.0.4) is sorted"]
-            draw_curses_data(screen, data) 
+            while not incoming_data.empty():
+                # process data received from client
+                msg = incoming_data.get()
+
+                if type(msg) is RegistrationRequest:
+                    #register team
+                    team_manager.register(msg.ip_address, msg.team_name)
+                    
+                elif type(msg) is DataResponse:
+                    # deallocate team
+                    team_manager.deallocate(msg.ip_address)
+                    
+                    # check whether data is sorted
+                    list_sorted = False
+                    
+                    if isinstance(msg.data, list) and sorted(msg.data) == msg.data:
+                        list_sorted = True
+
+                    # add to data_display
+                    team_name = team_manager.get_team_name(msg.ip_address)
+                    data_display.append(format_timestamp() + "Data from " +
+                                        format_name_ip(team_name, msg.ip_address) +
+                                        "is " + ("" if list_sorted else "NOT ") + "sorted")    
+                    
+            # allocate data to free teams
+            for team_ip in team_manager.get_free_teams():
+                team_manager.allocate(team_ip, lists.get_list(LIST_LENGTH))
+                outgoing_data.put(DataResponse(team_ip, lists.get_list(LIST_LENGTH)))
+
+                # add to data display
+                team_name = team_manager.get_team_name(team_ip)
+                data_display.append(format_timestamp() + "Sent data to " +
+                                    format_name_ip(team_name, team_ip))
+
+            # check timed out teams
+            for team_ip in team_manager.get_timed_out_teams():
+                team_manager.deallocate(team_ip)
+                
+                # add to data display
+                team_name = team_manager.get_team_name(team_ip)
+                data_display.append(format_timestamp() + "Response from "+
+                                    format_name_ip(team_name, team_ip) +
+                                    "timed out ")
+                
+            draw_curses_data(screen, data_display) 
             screen.refresh()    
 
             # Parse keypresses
@@ -51,7 +125,12 @@ def finale_mode(screen):
         if not dummy_mode:
 
             status = StatusDisplay(925, -25, CAMERA)
-            status.display_list(['team1','team2','team3','team4'])
+
+            team_list = map(team_manager.get_team_name, team_manager.get_registered_teams())
+            
+            status.display_list(team_list)
+
+            # do we want to wait for all teams to have timed out?
             
             remaining_rows = list(range(0, points.num_pixels_h))
         
@@ -148,7 +227,7 @@ def draw_curses_menu(screen):
 def draw_curses_data(screen, data):
     # Clear previous rows
     height, width = screen.getmaxyx()
-    for i in range(11, 21):
+    for i in range(11, 11+RECENT):
         if i < height-2:
             screen.move(i, 2)
             screen.hline(" ", width-3)    
