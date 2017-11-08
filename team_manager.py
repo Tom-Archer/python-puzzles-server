@@ -64,7 +64,6 @@ class TeamManager(object):
 
 if __name__ == "__main__":
     import ipaddress
-    import time
     team_manager = TeamManager()
     ip = ipaddress.ip_address('192.0.2.1') 
     team_manager.register(ip,"team1")

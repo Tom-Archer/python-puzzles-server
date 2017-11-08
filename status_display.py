@@ -20,7 +20,8 @@ class StatusDisplay(pi3d.PointText):
     def display_list(self, display):
         current_y = self.y
         for item in display:
-            newtxt = pi3d.TextBlock(self.x, current_y, 100, 0.0, 14, text_format=item,
+            newtxt = pi3d.TextBlock(self.x, current_y, 100, 0.0, len(item)
+                                    , text_format=item,
                                     size=0.99, spacing="F", space=0.05, colour=(0.0, 1.0, 0.0, 1.0))
             self.add_text_block(newtxt)
             current_y = current_y - 25

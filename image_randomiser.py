@@ -28,7 +28,6 @@ import random
 import time
 import pi3d
 from PIL import Image
-from status_display import StatusDisplay
 
 class ImageRandomiser(pi3d.Points):
     def __init__(self, texture_path, width, height, pixel_size, camera):
@@ -115,6 +114,8 @@ class ImageRandomiser(pi3d.Points):
         self.re_init(pts=self.loc) # reform opengles array_buffer
 
 if __name__ == '__main__':
+    from status_display import StatusDisplay
+
     print("""
     Space to start
     ESC to quit
