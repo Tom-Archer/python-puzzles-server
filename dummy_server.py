@@ -77,7 +77,8 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
                 
         # allocate data to free teams
         for team_ip in team_manager.get_free_teams():
-            team_manager.allocate(team_ip, lists.get_list(LIST_LENGTH))
+            team_manager.allocate(team_ip, 0)
+            
             outgoing_data.put(DataResponse(team_ip, lists.get_list(LIST_LENGTH)))
 
             # add to data display
@@ -104,5 +105,5 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
             if k == 27:
                 keyboard.close()
                 return False
-            else:
+            elif k == 32:
                 return True

@@ -1,26 +1,55 @@
 import random
+import time
+from comms import RegistrationRequest, DataResponse
 
 def run(team_manager, incoming_data, outgoing_data, points, status, display, keyboard):
     
     team_list = [team_manager.get_team_name(team) for team in team_manager.get_registered_teams()]
     status.display_list(team_list)
 
-    # To be finished.
-    # do we want to wait for all teams to have timed out?
+    # Wait for teams to time out
+    time.sleep(3)
     
     remaining_rows = list(range(0, points.num_pixels_h))
 
     started = False
     while display.loop_running():
     
-        if len(remaining_rows) == 0:
-            started = False
-
         if started:
-            # Update positions
-            row = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
-            points.update([row])
+            
+            while not incoming_data.empty():
+                # process data received from client
+                msg = incoming_data.get()
+                
+                if type(msg) is RegistrationRequest:
+                    #register team
+                    team_manager.register(msg.ip_address, msg.team_name)
+                    
+                elif type(msg) is DataResponse:
+                    # deallocate team
+                    row_id = team_manager.deallocate(msg.ip_address)
+            
+                    if row_id != None:
+                        # Update positions
+                        points.update([row_id])
+                   
+            # allocate data to free teams
+            for team_ip in team_manager.get_free_teams():
 
+                # get a random remaining row
+                if len(remaining_rows) > 0:
+                    row_id = remaining_rows.pop(random.randint(0, len(remaining_rows)-1))
+                    row = points.get_row(row_id)
+
+                    team_manager.allocate(team_ip, row_id)
+                    outgoing_data.put(DataResponse(team_ip, row))
+                else:
+                    break
+
+            # check timed out teams
+            for team_ip in team_manager.get_timed_out_teams():
+                team_manager.deallocate(team_ip)
+                
         # Draw
         points.draw()
         status.regen()
@@ -33,5 +62,5 @@ def run(team_manager, incoming_data, outgoing_data, points, status, display, key
                 keyboard.close()
                 display.stop()
                 break
-            if k == 32:
+            elif k == 32:
                 started = True

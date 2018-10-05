@@ -61,6 +61,10 @@ def finale_mode():
         DISPLAY.stop()
         LOGGER.info(str(e))   
 
+    p_registration.terminate()
+    p_in.terminate()
+    p_out.terminate()
+
 def demo_mode():
     try:
         points = ImageRandomiser(IMAGE_NAME, IMAGE_SIZE, IMAGE_SIZE, PIXEL_SIZE, CAMERA)

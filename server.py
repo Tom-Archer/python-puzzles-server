@@ -33,7 +33,7 @@ class Server:
 
     def receive_connection_request(self):
         # NOTE: This recvfrom function call is blocking - Can be set with parameters such as a timeout.
-        data, ipAddr = self.connectionSocket.recvfrom(2048) # buffer size is 2048 bytes
+        data, ipAddr = self.connectionSocket.recvfrom(2048) 
         #print("Data Received: " + str(list(data)) + " from: " + str(ipAddr))
         nodeIpAddr, sTeamName = pickle.loads(data)
         self.send_connection_confirmation(nodeIpAddr)
@@ -46,7 +46,7 @@ class Server:
 
     def receive_data(self):
         # NOTE: This recvfrom function call is blocking - Can be set with parameters such as a timeout.
-        data, ip_addr = self.dataSocket.recvfrom(4096) # buffer size is 2048 bytes
+        data, ip_addr = self.dataSocket.recvfrom(4096)
         #print("Data Received: ")# + str(list(data)) + " from: " + str(ip_addr))
         return data, ip_addr[0]
 

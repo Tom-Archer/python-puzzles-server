@@ -23,15 +23,18 @@ class TeamManager(object):
         else:
             self.team_dict[ip_address] = Team(team_name)
 
-    def allocate(self, ip_address, row):
+    def allocate(self, ip_address, row_id):
         if ip_address in self.team_dict:
             self.team_dict[ip_address].has_data = True
-            self.team_dict[ip_address].has_row = row
+            self.team_dict[ip_address].has_row = row_id
             self.team_dict[ip_address].send_time = time.time()
 
     def deallocate(self, ip_address):
         if ip_address in self.team_dict:
-            self.team_dict[ip_address].has_data = False
+            if self.team_dict[ip_address].has_data:
+                self.team_dict[ip_address].has_data = False
+                return self.team_dict[ip_address].has_row
+        return None
 
     def get_registered_teams(self):
         return list(self.team_dict.keys())

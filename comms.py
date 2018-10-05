@@ -26,7 +26,7 @@ def incoming_data_process(server, data_queue):
         data_queue.put(DataResponse(ip_address, up_data))
         
 def outgoing_data_process(server, data_queue):
-    """Waits on sorted data."""
+    """Sends unsorted data."""
     while True:
         if data_queue.empty():
             msg = data_queue.get()
