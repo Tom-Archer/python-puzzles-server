@@ -49,21 +49,12 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
     draw_curses_menu(screen)
     screen.refresh()    
 
-    # for testing add some dummy data
-    import ipaddress
-    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.2'), "team 1"))
-    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.3'), "team 2"))
-    incoming_data.put(RegistrationRequest(ipaddress.ip_address('192.0.2.4'), "a very long team name"))
-    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.2'), lists.get_list(LIST_LENGTH)))
-    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.3'), sorted(lists.get_list(LIST_LENGTH))))
-    incoming_data.put(DataResponse(ipaddress.ip_address('192.0.2.4'), lists.get_list(LIST_LENGTH)))
-
     while True:
         while not incoming_data.empty():
             
             # process data received from client
             msg = incoming_data.get()
-
+            
             if type(msg) is RegistrationRequest:
                 #register team
                 team_manager.register(msg.ip_address, msg.team_name)
@@ -113,5 +104,5 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
             if k == 27:
                 keyboard.close()
                 return False
-            if k == 32:
+            else:
                 return True

@@ -4,9 +4,10 @@ import demo
 import dummy_server
 import finale
 import pi3d
-#from comms import Server
+import comms
+from server import Server
 from image_randomiser import ImageRandomiser
-from multiprocessing import Queue
+from multiprocessing import Queue, Process
 from status_display import StatusDisplay
 from team_manager import TeamManager
 
@@ -37,6 +38,16 @@ def finale_mode():
     outgoing_data = Queue()
     # To do: set up comms/server here
     
+    # Create server
+    server = Server()
+    # Processes
+    p_registration = Process(target=comms.registration_process, args=(server, incoming_data))
+    p_in = Process(target=comms.incoming_data_process, args=(server, incoming_data))
+    p_out = Process(target=comms.outgoing_data_process, args=(server, outgoing_data))
+    p_registration.start()
+    p_in.start()
+    p_out.start()
+    
     try:
         if dummy_server.run(team_manager, data_display, incoming_data, outgoing_data, KEYBOARD):
 
@@ -48,7 +59,7 @@ def finale_mode():
     except Exception as e:
         KEYBOARD.close()
         DISPLAY.stop()
-        LOGGER.info(str(e))    
+        LOGGER.info(str(e))   
 
 def demo_mode():
     try:
