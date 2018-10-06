@@ -15,7 +15,6 @@ class StatusDisplay(pi3d.PointText):
         point_font = pi3d.Font(font_path, font_colour, codepoints=list(range(32,128)))
         super(StatusDisplay, self).__init__(font=point_font, camera=camera,
                                             max_chars=200, point_size=32)
-
         
     def display_list(self, display):
         current_y = self.y

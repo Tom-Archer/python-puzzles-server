@@ -56,7 +56,7 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
             msg = incoming_data.get()
             
             if type(msg) is RegistrationRequest:
-                #register team
+                # register team
                 team_manager.register(msg.ip_address, msg.team_name)
                 
             elif type(msg) is DataResponse:
@@ -65,7 +65,6 @@ def run(team_manager, data_display, incoming_data, outgoing_data, keyboard):
                 
                 # check whether data is sorted
                 list_sorted = False
-                
                 if isinstance(msg.data, list) and sorted(msg.data) == msg.data:
                     list_sorted = True
 

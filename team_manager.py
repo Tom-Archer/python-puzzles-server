@@ -14,22 +14,26 @@ class Team(object):
         return (self.name[:15] + '..') if len(self.name) > 15 else self.name
     
 class TeamManager(object):
+    """Manages team registrations, row allocation and deallocation."""
     def __init__(self):
         self.team_dict = {}
 
     def register(self, ip_address, team_name):
+        """Register a team name to a given IP address."""
         if ip_address in self.team_dict:
             self.team_dict[ip_address].name = team_name
         else:
             self.team_dict[ip_address] = Team(team_name)
 
     def allocate(self, ip_address, row_id):
+        """Allocate a row number to an IP address."""
         if ip_address in self.team_dict:
             self.team_dict[ip_address].has_data = True
             self.team_dict[ip_address].has_row = row_id
             self.team_dict[ip_address].send_time = time.time()
 
     def deallocate(self, ip_address):
+        """Remove an allocated row number from an IP address."""
         if ip_address in self.team_dict:
             if self.team_dict[ip_address].has_data:
                 self.team_dict[ip_address].has_data = False
@@ -37,9 +41,11 @@ class TeamManager(object):
         return None
 
     def get_registered_teams(self):
+        """Return a list of all the registered IP addresses."""
         return list(self.team_dict.keys())
 
     def get_free_teams(self):
+        """Return a list of IP addresses without data."""
         free_teams = []
         for ip_address in self.team_dict:
             if not self.team_dict[ip_address].has_data:
@@ -47,6 +53,7 @@ class TeamManager(object):
         return free_teams
 
     def get_timed_out_teams(self):
+        """Return a list of teams who have not returned data."""
         timed_out_teams = []
         for ip_address in self.team_dict:
             if self.team_dict[ip_address].has_data and self.team_dict[ip_address].send_time != 0:
@@ -55,11 +62,13 @@ class TeamManager(object):
         return timed_out_teams
 
     def get_team_name(self, ip_address):
+        """Get the team name for a given IP address."""
         if ip_address in self.team_dict:
             return str(self.team_dict[ip_address])
         return None
 
     def reset_allocations(self):
+        """Reset all allocations."""
         for ip_address in self.team_dict:
             team = self.team_dict[ip_address]
             team.has_data = False

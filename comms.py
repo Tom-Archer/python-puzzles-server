@@ -1,4 +1,3 @@
-import pickle
 
 class RegistrationRequest(object):
     """Encapsulates a registration request from the client."""
@@ -22,13 +21,12 @@ def incoming_data_process(server, data_queue):
     """Waits on sorted data."""
     while True:
         data, ip_address = server.receive_data()
-        up_data = pickle.loads(data)
-        data_queue.put(DataResponse(ip_address, up_data))
+        data_queue.put(DataResponse(ip_address, data))
         
 def outgoing_data_process(server, data_queue):
     """Sends unsorted data."""
     while True:
-        if data_queue.empty():
-            msg = data_queue.get()
-            server.send_data(msg.ip_address, msg.data)
+        # NOTE: The get function blocks
+        msg = data_queue.get()
+        server.send_data(msg.ip_address, msg.data)
             

@@ -34,7 +34,6 @@ class Server:
     def receive_connection_request(self):
         # NOTE: This recvfrom function call is blocking - Can be set with parameters such as a timeout.
         data, ipAddr = self.connectionSocket.recvfrom(2048) 
-        #print("Data Received: " + str(list(data)) + " from: " + str(ipAddr))
         nodeIpAddr, sTeamName = pickle.loads(data)
         self.send_connection_confirmation(nodeIpAddr)
         return nodeIpAddr, sTeamName
@@ -47,12 +46,11 @@ class Server:
     def receive_data(self):
         # NOTE: This recvfrom function call is blocking - Can be set with parameters such as a timeout.
         data, ip_addr = self.dataSocket.recvfrom(4096)
-        #print("Data Received: ")# + str(list(data)) + " from: " + str(ip_addr))
+        data = pickle.loads(data)
         return data, ip_addr[0]
 
     def send_data(self, nodeIp, data):
         addr = (str(nodeIp), CLIENT_DATA_PORT)
-        #print("Data Sent: " + str(list(data)))
         data = pickle.dumps(data)
         self.dataSocket.sendto(data, addr)
 

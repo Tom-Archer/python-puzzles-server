@@ -36,7 +36,6 @@ def finale_mode():
     data_display = collections.deque(maxlen = dummy_server.RECENT)
     incoming_data = Queue()
     outgoing_data = Queue()
-    # To do: set up comms/server here
     
     # Create server
     server = Server()
@@ -57,9 +56,9 @@ def finale_mode():
             finale.run(team_manager, incoming_data, outgoing_data, points, status, DISPLAY, KEYBOARD)
 
     except Exception as e:
+        LOGGER.info(str(e))  
         KEYBOARD.close()
         DISPLAY.stop()
-        LOGGER.info(str(e))   
 
     p_registration.terminate()
     p_in.terminate()
@@ -72,9 +71,9 @@ def demo_mode():
         demo.run(args.time, points, DISPLAY, KEYBOARD)
         
     except Exception as e:
+        LOGGER.info(str(e))
         KEYBOARD.close()
         DISPLAY.stop()
-        LOGGER.info(str(e))
         
 if args.demo:
     LOGGER.info('Running in Demo Mode')
